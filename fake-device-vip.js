@@ -1,6 +1,5 @@
 /*
-  fake-device-vip.js
-  Tự động fake IMEI, Android ID, Model cho API anti-cheat
+  Fake Device VIP++: Auto adjust fake mode (login vs in-game)
 */
 
 function randomIMEI() {
@@ -11,9 +10,13 @@ function randomIMEI() {
 
 function randomAndroidID() {
     const chars = 'abcdef0123456789';
-    let id = '';
-    for (let i = 0; i < 16; i++) id += chars[Math.floor(Math.random() * chars.length)];
-    return id;
+    return Array.from({ length: 16 }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
+}
+
+function randomMAC() {
+    const hex = "0123456789ABCDEF";
+    return Array.from({ length: 6 }, () => hex[Math.floor(Math.random() * hex.length)])
+        .map((v, i) => i ? v + (i % 2 ? ":" : "") : v).join("").replace(/:$/, "");
 }
 
 function randomModel() {
@@ -21,18 +24,39 @@ function randomModel() {
     return models[Math.floor(Math.random() * models.length)];
 }
 
-// Tạo device info giả
-const fakeData = {
-    imei: randomIMEI(),
-    android_id: randomAndroidID(),
-    model: randomModel(),
-    device_name: "FreeFire_VIP",
-    manufacturer: "Samsung",
-    os_version: "Android 13"
-};
+// Đọc chế độ hiện tại từ auto-switch
+let mode = $persistentStore.read("fake_mode") || "light";
+console.log("[FAKE-DEVICE] Mode:", mode);
 
-// Log ra để kiểm tra trong Shadowrocket
-console.log("[FAKE-DEVICE] IMEI:", fakeData.imei, "| AndroidID:", fakeData.android_id, "| Model:", fakeData.model);
+let fakeData = {};
 
-// Trả response fake
+if (mode === "strong") {
+    // Fake mạnh khi login
+    fakeData = {
+        imei: randomIMEI(),
+        android_id: randomAndroidID(),
+        mac: randomMAC(),
+        model: randomModel(),
+        manufacturer: "Samsung",
+        os_version: "Android 13",
+        battery: Math.floor(Math.random() * 50) + 50,
+        resolution: "1080x2400",
+        cpu: "Snapdragon 888"
+    };
+} else {
+    // Fake nhẹ khi in-game (giữ ID ổn định)
+    fakeData = {
+        imei: "356789012345678",
+        android_id: "abc123def4567890",
+        mac: "00:1A:2B:3C:4D:5E",
+        model: "SM-G996U",
+        manufacturer: "Samsung",
+        os_version: "Android 13",
+        battery: 80,
+        resolution: "1080x2400",
+        cpu: "Snapdragon 888"
+    };
+}
+
+console.log("[FAKE-DEVICE] Sending:", fakeData);
 $done({ body: JSON.stringify(fakeData) });
